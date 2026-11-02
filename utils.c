@@ -200,7 +200,11 @@ void	warning(const char *fmt, ...) {
 	g_warned = 1;
 }
 
-/* Runs one test in a child: 0 passed, 1 failed, 2 warned. Its output in log. */
+/*
+ * Runs one test in a child: 0 passed, 1 failed, 2 warned. Its output in log.
+ * The child may not write files past OUTPUT_LIMIT: an endless output stops
+ * there instead of filling the disk.
+ */
 static int	fork_test(const t_test *t, char *log, size_t size) {
 	static int	fd = -1;
 	pid_t		pid;
@@ -222,6 +226,7 @@ static int	fork_test(const t_test *t, char *log, size_t size) {
 	if (pid < 0)
 		die("fairy: fork");
 	if (!pid) {
+		setrlimit(RLIMIT_FSIZE, &(struct rlimit){OUTPUT_LIMIT, OUTPUT_LIMIT});
 		dup2(fd, STDOUT_FILENO);
 		dup2(fd, STDERR_FILENO);
 		alarm(g_timeout);
@@ -235,7 +240,9 @@ static int	fork_test(const t_test *t, char *log, size_t size) {
 	log[len] = '\0';
 	if (WIFEXITED(status))
 		return WEXITSTATUS(status) == 2 ? 2 : WEXITSTATUS(status) != 0;
-	if (WTERMSIG(status) != SIGALRM)
+	if (WTERMSIG(status) == SIGXFSZ)
+		snprintf(log + len, size - len, "↳ wrote more than %d MB: endless output?\n", OUTPUT_LIMIT >> 20);
+	else if (WTERMSIG(status) != SIGALRM)
 		snprintf(log + len, size - len, "↳ crashed: %s\n", strsignal(WTERMSIG(status)));
 	else {
 		snprintf(log + len, size - len, "↳ timeout after %ds (infinite loop?)%s\n", g_timeout,

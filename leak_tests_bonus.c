@@ -26,25 +26,29 @@ static void	leak_multi_fd_interleaved(void) {
 	}
 }
 
+/*
+ * Each malloc failing in turn while three fds are read one after another, so
+ * that it hits the state of a new fd while the others hold theirs.
+ */
 static void	leak_multi_fd_malloc_fail(void) {
-	const char	*content[NB_FD] = {
-		"11\n22\n",
-		"33\n44\n",
-		"55\n66\n"
-	};
+	const char	*content[NB_FD] = {"11\n22\n", "33\n44\n", "55\n66\n"};
 	int			fd[NB_FD];
 
-	for (int i = 0; i < NB_FD; i++)
-		fd[i] = gnl_tmp_open(content[i]);
-	g_malloc_count = 0;
-	g_malloc_fail_at = 2;
-	g_malloc_wrap_enabled = 1;
-	for (int i = 0; i < NB_FD; i++)
-		free(get_next_line(fd[i]));
-	g_malloc_wrap_enabled = 0;
-	for (int i = 0; i < NB_FD; i++) {
-		gnl_drain(fd[i]);
-		close(fd[i]);
+	for (int k = 1; k < 1000; k++) {
+		for (int i = 0; i < NB_FD; i++)
+			fd[i] = gnl_tmp_open(content[i]);
+		g_malloc_count = 0;
+		g_malloc_fail_at = k;
+		g_malloc_wrap_enabled = 1;
+		for (int i = 0; i < NB_FD; i++)
+			free(get_next_line(fd[i]));
+		g_malloc_wrap_enabled = 0;
+		for (int i = 0; i < NB_FD; i++) {
+			gnl_drain(fd[i]);
+			close(fd[i]);
+		}
+		if (g_malloc_count < k)
+			break ;
 	}
 }
 

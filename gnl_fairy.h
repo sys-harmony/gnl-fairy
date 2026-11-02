@@ -13,6 +13,7 @@
 # include <stdlib.h>
 # include <string.h>
 # include <unistd.h>
+# include <sys/resource.h>
 # include <sys/wait.h>
 
 // =============================
@@ -26,6 +27,7 @@
 # define RESET			"\033[0m"
 # define WIDTH			46		// as in run.sh
 # define TEST_TIMEOUT	10		// seconds before a test counts as hanging
+# define OUTPUT_LIMIT	(8 << 20)	// bytes a test may write to files
 # ifndef VERBOSE
 #  define VERBOSE		0
 # endif

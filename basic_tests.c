@@ -231,6 +231,7 @@ static void	read_rules_test(void) {
 	content[6 * count] = '\0';
 	fd = gnl_tmp_open(content);
 	g_read_total = 0;
+	g_read_bad_size = 0;
 	line = get_next_line(fd);
 	if (line && g_read_total >= strlen(line) + BUFFER_SIZE)
 		warning("read %zu bytes to return a %zu-char first line: the subject says "
