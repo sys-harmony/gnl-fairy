@@ -9,91 +9,65 @@
  * where get_next_line must return NULL without leaking.
  */
 
-static void	drain(int fd) {
-	char	*line;
+static void	leak_file(const char *content) {
+	int	fd = gnl_tmp_open(content);
 
-	while ((line = get_next_line(fd)) != NULL)
-		free(line);
-}
-
-static void	leak_full_with_nl(void) {
-	char	path[32];
-	int		fd = gnl_tmp_open("alpha\nbeta\ngamma\n", path);
-
-	drain(fd);
+	gnl_drain(fd);
 	close(fd);
-	unlink(path);
-}
-
-static void	leak_full_no_nl(void) {
-	char	path[32];
-	int		fd = gnl_tmp_open("alpha\nbeta\ngamma", path);
-
-	drain(fd);
-	close(fd);
-	unlink(path);
 }
 
 static void	leak_long_line(void) {
 	char	big[8192];
-	char	path[32];
+
+	memset(big, 'a', sizeof(big) - 1);
+	big[sizeof(big) - 1] = '\0';
+	leak_file(big);
+}
+
+/* read() fails while a partial line sits in the stash (BUFFER_SIZE 42, 9999). */
+static void	leak_read_error(void) {
+	char	content[200];
 	int		fd;
 
-	for (size_t i = 0; i < sizeof(big) - 1; i++)
-		big[i] = 'a';
-	big[sizeof(big) - 1] = '\0';
-	fd = gnl_tmp_open(big, path);
-	drain(fd);
+	memset(content, 'x', sizeof(content) - 1);
+	content[sizeof(content) - 1] = '\0';
+	memcpy(content, "head\n", 5);
+	fd = gnl_tmp_open(content);
+	free(get_next_line(fd));
+	g_read_fail_fd = fd;
+	free(get_next_line(fd));
+	g_read_fail_fd = -1;
+	gnl_drain(fd);
 	close(fd);
-	unlink(path);
 }
 
-static void	leak_many_lines(void) {
-	char	path[32];
-	int		fd = gnl_tmp_open("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n", path);
-
-	drain(fd);
-	close(fd);
-	unlink(path);
-}
-
-static void	leak_read_error(void) {
-	char	path[32];
-	int		fd = gnl_tmp_open("will not be read\n", path);
-	char	*line;
-
-	g_read_error_enabled = 1;
-	line = get_next_line(fd);
-	g_read_error_enabled = 0;
-	free(line);
-	drain(fd);
-	close(fd);
-	unlink(path);
-}
-
+/*
+ * Fails each malloc of a full read in turn (1st, then 2nd, ...): get_next_line
+ * may give up early but must neither crash nor leak. Stops once a full read no
+ * longer reaches the k-th malloc, i.e. every allocation site has failed once.
+ */
 static void	leak_malloc_fail(void) {
-	char	path[32];
-	int		fd = gnl_tmp_open("x\ny\nz\n", path);
-	char	*line;
+	int	fd;
 
-	for (int k = 1; k <= 3; k++) {
+	for (int k = 1; k < 1000; k++) {
+		fd = gnl_tmp_open("x\nyy\nzzz");
 		g_malloc_count = 0;
 		g_malloc_fail_at = k;
 		g_malloc_wrap_enabled = 1;
-		line = get_next_line(fd);
+		gnl_drain(fd);
 		g_malloc_wrap_enabled = 0;
-		free(line);
+		gnl_drain(fd);
+		close(fd);
+		if (g_malloc_count < k)
+			break ;
 	}
-	drain(fd);
-	close(fd);
-	unlink(path);
 }
 
 int	main(void) {
-	leak_full_with_nl();
-	leak_full_no_nl();
+	leak_file("alpha\nbeta\ngamma\n");
+	leak_file("alpha\nbeta\ngamma");
 	leak_long_line();
-	leak_many_lines();
+	leak_file("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n");
 	leak_read_error();
 	leak_malloc_fail();
 	return 0;

@@ -7,34 +7,22 @@
 
 #define NB_FD 3
 
-static void	drain(int fd) {
-	char	*line;
-
-	while ((line = get_next_line(fd)) != NULL)
-		free(line);
-}
-
 static void	leak_multi_fd_interleaved(void) {
 	const char	*content[NB_FD] = {
 		"a\nb\nc\n",
 		"d\ne\n",
 		"f\ng\nh\ni\n"
 	};
-	char		path[NB_FD][32];
 	int			fd[NB_FD];
-	char		*line;
 
 	for (int i = 0; i < NB_FD; i++)
-		fd[i] = gnl_tmp_open(content[i], path[i]);
+		fd[i] = gnl_tmp_open(content[i]);
 	/* read one line from each before draining, to keep stashes live */
+	for (int i = 0; i < NB_FD; i++)
+		free(get_next_line(fd[i]));
 	for (int i = 0; i < NB_FD; i++) {
-		line = get_next_line(fd[i]);
-		free(line);
-	}
-	for (int i = 0; i < NB_FD; i++) {
-		drain(fd[i]);
+		gnl_drain(fd[i]);
 		close(fd[i]);
-		unlink(path[i]);
 	}
 }
 
@@ -44,24 +32,19 @@ static void	leak_multi_fd_malloc_fail(void) {
 		"33\n44\n",
 		"55\n66\n"
 	};
-	char		path[NB_FD][32];
 	int			fd[NB_FD];
-	char		*line;
 
 	for (int i = 0; i < NB_FD; i++)
-		fd[i] = gnl_tmp_open(content[i], path[i]);
+		fd[i] = gnl_tmp_open(content[i]);
 	g_malloc_count = 0;
 	g_malloc_fail_at = 2;
 	g_malloc_wrap_enabled = 1;
-	for (int i = 0; i < NB_FD; i++) {
-		line = get_next_line(fd[i]);
-		free(line);
-	}
+	for (int i = 0; i < NB_FD; i++)
+		free(get_next_line(fd[i]));
 	g_malloc_wrap_enabled = 0;
 	for (int i = 0; i < NB_FD; i++) {
-		drain(fd[i]);
+		gnl_drain(fd[i]);
 		close(fd[i]);
-		unlink(path[i]);
 	}
 }
 
