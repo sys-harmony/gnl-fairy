@@ -115,33 +115,42 @@ rc() { cat "$TMP/$1.rc" 2> /dev/null || echo 1; }
 # ---- checks shared by the three subjects -------------------------------------
 in_git() { git rev-parse --is-inside-work-tree > /dev/null 2>&1; }
 
-# defines_main <file>: a program, not a library function: a local test, which
-# none of these subjects hands in
-defines_main() { grep -qE '^[[:space:]]*int[[:space:]]+main[[:space:]]*\(' "$1"; }
+# local_test <file>: a .c with an active main() (comments do not count: a test
+# main left in a comment is common) that the project does not build, hence a
+# local test. The Makefile next to the file names what is built; $KEEP names the
+# files of a project without Makefile. A main() left active in a library source
+# is a defect, not a test: the file stays graded.
+local_test() {
+    local base=${1##*/} dir=${1%/*}
+    [[ $dir == "$1" ]] && dir=.
+    [[ " ${KEEP:-} " == *" $1 "* ]] && return 1
+    grep -qswF -e "$base" -e "${base%.c}" Makefile "$dir/Makefile" && return 1
+    { perl -0777 -pe 's{/\*.*?\*/}{ }gs; s{//[^\n]*}{}g' "$1" 2> /dev/null || cat "$1"; } \
+        | grep -qE '^[[:space:]]*int[[:space:]]+main[[:space:]]*\('
+}
 
 # sources: the .c and .h files a grader gets. In a git repository that already
 # tracks some: the tracked ones still on disk (a local main.c is fine).
-# Otherwise all, but the programs with a main().
+# Otherwise all, but the local tests.
 sources() {
     local files=""
     in_git && files=$(git ls-files -- '*.c' '*.h' | grep -v "^$TESTER/" \
         | while read -r f; do [[ -f $f ]] && echo "$f"; done)
     [[ -z $files ]] && files=$(find . -path "./$TESTER" -prune -o -type f \( -name '*.c' -o -name '*.h' \) -print \
-        | sed 's|^\./||' | sort | while read -r f; do [[ $f == *.c ]] && defines_main "$f" || echo "$f"; done)
+        | sed 's|^\./||' | sort | while read -r f; do [[ $f == *.c ]] && local_test "$f" || echo "$f"; done)
     [[ -n $files ]] && printf '%s\n' "$files"
 }
 
 # report_untracked <pathspecs...>: warns about the project files git would not
 # hand to the grader, and about those deleted but still committed. Outside git,
-# about the programs with a main() that sources() leaves out. Returns 1 when
-# there is none.
+# about the local tests that sources() leaves out. Returns 1 when there is none.
 report_untracked() {
     local new old
     if ! in_git; then
         new=$(find . -path "./$TESTER" -prune -o -type f -name '*.c' -print | sed 's|^\./||' | sort \
-            | while read -r f; do defines_main "$f" && echo "$f"; done | xargs)
+            | while read -r f; do local_test "$f" && echo "$f"; done | xargs)
         [[ -n $new ]] || return 1
-        warn; say "not a git repository: left out as local tests, they define main(): $new"
+        warn; say "not a git repository: left out as local tests, they define main() and nothing builds them: $new"
         return
     fi
     new=$(git ls-files -o --exclude-standard -- "$@" | grep -v "^$TESTER/" | xargs)
@@ -298,6 +307,7 @@ EDGE_SIZES="0 -1"       # outside the subject: what goes wrong there only warns
 VG_LEAKS=definite,indirect  # memory held at exit after the end only warns
 MANDATORY="get_next_line.c get_next_line_utils.c get_next_line.h"
 BONUS_FILES="get_next_line_bonus.c get_next_line_utils_bonus.c get_next_line_bonus.h"
+KEEP="$MANDATORY $BONUS_FILES"      # no Makefile: these are the files, whatever they hold
 
 echo; box "$PINK" "GNL-FAIRY" 🧚; echo
 norm_start
