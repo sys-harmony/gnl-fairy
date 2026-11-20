@@ -233,7 +233,9 @@ big_static() {
 # and exits 0, 1 (failure) or 2 (warnings). Anything else is reported here.
 tests() {
     local rc
-    (timeout --foreground 600 "$2" 2>&1) 2> /dev/null     # no "Segmentation fault" from bash
+    # A group, not a subshell: the "Segmentation fault" notice when the binary is killed is the
+    # shell's own, only a redirect of the shell itself hides it
+    { timeout --foreground 600 "$2" 2>&1; } 2> /dev/null
     rc=$?
     [[ $rc -le 2 ]] && return $rc
     section "$1"
@@ -253,9 +255,9 @@ memcheck() {
         section "valgrind · $1"; say "valgrind not found: leaks NOT checked"
         return 2
     fi
-    (timeout --foreground 30 valgrind --leak-check=full --show-leak-kinds=all \
+    { timeout --foreground 30 valgrind --leak-check=full --show-leak-kinds=all \
         --errors-for-leak-kinds="$VG_LEAKS" --error-exitcode=42 --track-origins=yes \
-        --log-file="$log" "${@:2}" > /dev/null 2>&1) 2> /dev/null
+        --log-file="$log" "${@:2}" > /dev/null 2>&1; } 2> /dev/null     # a group: see tests()
     rc=$?
     if [[ $rc -ne 0 ]] && grep -q "very large text, data or bss" "$log"; then
         rc=2 note="Valgrind cannot load it (huge static data): leaks NOT checked"
