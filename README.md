@@ -50,13 +50,15 @@ The exit status is `0` when everything passed (warnings included), `1` otherwise
 [KO] 5000-char line, no newline
      ↳ line 1: expected "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"… (5000 chars), got NULL
 …
+
 🧪 Bonus tests .......................... Done
 🧹 Cleanup .............................. Done
 
 ╔════════════════════════════════════════════╗
 ║            OH NO... YOU FAILED!            ║
 ╚════════════════════════════════════════════╝
-   ✘ Tests · 31/213 tests failed · 4.60s
+
+✘ Tests · 31/213 tests failed · 4.60s
 ```
 
 Only what did not pass is listed, each time with its reason: the first line that differs (expected vs got), a crash signal, a timeout, or the AddressSanitizer or Valgrind report. Tests are built with `-g`: reports point to your file and line.
