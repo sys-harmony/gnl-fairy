@@ -115,23 +115,35 @@ rc() { cat "$TMP/$1.rc" 2> /dev/null || echo 1; }
 # ---- checks shared by the three subjects -------------------------------------
 in_git() { git rev-parse --is-inside-work-tree > /dev/null 2>&1; }
 
+# defines_main <file>: a program, not a library function: a local test, which
+# none of these subjects hands in
+defines_main() { grep -qE '^[[:space:]]*int[[:space:]]+main[[:space:]]*\(' "$1"; }
+
 # sources: the .c and .h files a grader gets. In a git repository that already
 # tracks some: the tracked ones still on disk (a local main.c is fine).
-# Otherwise all.
+# Otherwise all, but the programs with a main().
 sources() {
     local files=""
     in_git && files=$(git ls-files -- '*.c' '*.h' | grep -v "^$TESTER/" \
         | while read -r f; do [[ -f $f ]] && echo "$f"; done)
-    [[ -z $files ]] && files=$(find . -path "./$TESTER" -prune -o -type f \( -name '*.c' -o -name '*.h' \) -print | sed 's|^\./||' | sort)
+    [[ -z $files ]] && files=$(find . -path "./$TESTER" -prune -o -type f \( -name '*.c' -o -name '*.h' \) -print \
+        | sed 's|^\./||' | sort | while read -r f; do [[ $f == *.c ]] && defines_main "$f" || echo "$f"; done)
     [[ -n $files ]] && printf '%s\n' "$files"
 }
 
 # report_untracked <pathspecs...>: warns about the project files git would not
-# hand to the grader, and about those deleted but still committed. Returns 1
-# when there is none.
+# hand to the grader, and about those deleted but still committed. Outside git,
+# about the programs with a main() that sources() leaves out. Returns 1 when
+# there is none.
 report_untracked() {
     local new old
-    in_git || return 1
+    if ! in_git; then
+        new=$(find . -path "./$TESTER" -prune -o -type f -name '*.c' -print | sed 's|^\./||' | sort \
+            | while read -r f; do defines_main "$f" && echo "$f"; done | xargs)
+        [[ -n $new ]] || return 1
+        warn; say "not a git repository: left out as local tests, they define main(): $new"
+        return
+    fi
     new=$(git ls-files -o --exclude-standard -- "$@" | grep -v "^$TESTER/" | xargs)
     old=$(git ls-files -d -- Makefile README.md '*.c' '*.h' | grep -v "^$TESTER/" | xargs)
     [[ -n $new$old ]] || return 1
