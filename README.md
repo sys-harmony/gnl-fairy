@@ -113,7 +113,7 @@ Warnings, for get_next_line:
 
 ## 📋 Requirements
 
-Linux with `bash` 4.3+, `cc` (AddressSanitizer used when available), `nm`, `valgrind`, `norminette`, `perl` and coreutils.
+Linux with `bash` 4.4+, `cc` (AddressSanitizer used when available), `nm`, `valgrind`, `norminette`, `perl` and coreutils.
 
 ## 📁 Structure
 
