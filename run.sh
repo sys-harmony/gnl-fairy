@@ -197,6 +197,14 @@ died() {
     else echo "exited with status $1"; fi
 }
 
+# big_static <binary>: static data of a GB or more may not load at all on a
+# machine with less memory than the one that built it: say so
+big_static() {
+    local gb
+    gb=$(size "$1" 2> /dev/null | awk 'NR == 2 && $2 + $3 >= 2^30 {printf "%.1f", ($2 + $3) / 2^30}')
+    [[ -z $gb ]] || say "static data of $gb GB: if this machine cannot map it, the program dies before it runs"
+}
+
 # tests <title> <binary>: a test binary prints the sections that did not pass
 # and exits 0, 1 (failure) or 2 (warnings). Anything else is reported here.
 tests() {
@@ -206,6 +214,7 @@ tests() {
     [[ $rc -le 2 ]] && return $rc
     section "$1"
     say "$(died $rc)"
+    [[ $rc -eq 124 ]] || big_static "$2"
     if [[ -n ${LENIENT:-} ]]; then echo "1 0 1" >> "$FAIRY_STATS"; return 2; fi
     echo "0 1 0" >> "$FAIRY_STATS"
     return 1
