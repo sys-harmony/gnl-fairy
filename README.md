@@ -74,6 +74,7 @@ Warnings, for get_next_line:
 - a valid but high fd (1023) not served
 - anything going wrong with `BUFFER_SIZE` 0 or -1, outside the subject
 - a README that does not look like the subject's description, project files git does not track, or deleted but still committed
+- outside git, a `.c` defining `main()` (a local test): left out of the checks
 - `norminette` or `valgrind` missing: that check did not run
 
 ## 🧪 What is checked
@@ -81,7 +82,7 @@ Warnings, for get_next_line:
 | Step | What |
 |---|---|
 | 🔖 Version | Bonus when `get_next_line_bonus.c` exists |
-| 📂 Files | the subject's files at the root, and no other `.c` or `.h` among the graded ones (a local, untracked `main.c` is fine); project files not committed, or deleted but still committed (warning) |
+| 📂 Files | the subject's files at the root, and no other `.c` or `.h` among the graded ones (a local, untracked `main.c` is fine; outside git, a `.c` defining `main()` is left out); project files not committed, or deleted but still committed (warning) |
 | 📖 README | there (failure), with the italic first line, *Description*, *Instructions*, *Resources*, how AI was used and the algorithm (warnings) |
 | 📝 Norm | `norminette` on the graded files |
 | 📋 Prototype | the compiler checks the header against `char *get_next_line(int fd)` |
