@@ -168,6 +168,7 @@ check_readme() {
     fi
     head -n 1 README.md | grep -qE '^\s*(\*|_|<i>|<em>)This project has been created as part of the 42 curriculum by ' \
         || issues+=("first line, in italics: *This project has been created as part of the 42 curriculum by <login>*")
+    head -n 1 README.md | grep -q '<login' && issues+=("first line: replace <login1>, <login2>... with your login")
     for section in Description Instructions Res+ources; do
         grep -qiE "^\s*(#+|[*_]{1,2}).*$section" README.md || issues+=("no \"${section/s+/s}\" section")
     done
