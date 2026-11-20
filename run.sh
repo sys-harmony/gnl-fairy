@@ -86,11 +86,11 @@ finish() {
     echo
     if [[ $FAILED -eq 0 ]]; then
         box "$GREEN" "OH MY, YOU PASSED!"
-        printf '   %s✔ %d tests passed in %s%s' "$GREEN" "$total" "$secs" "$RESET"
+        printf '\n%s✔ %d tests passed in %s%s' "$GREEN" "$total" "$secs" "$RESET"
         [[ $WARNED -eq 1 ]] && printf '  %s⚠ warnings above: not failures, worth a look%s' "$YELLOW" "$RESET"
     else
         box "$RED" "OH NO... YOU FAILED!"
-        printf '   %s✘ %s' "$RED" "$FAILED_STEPS"
+        printf '\n%s✘ %s' "$RED" "$FAILED_STEPS"
         [[ $ko -gt 0 ]] && printf ' · %d/%d tests failed' "$ko" "$total"
         printf ' · %s%s' "$secs" "$RESET"
     fi

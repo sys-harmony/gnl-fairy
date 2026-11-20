@@ -56,7 +56,8 @@ The exit status is `0` when everything passed (warnings included), `1` otherwise
 ╔════════════════════════════════════════════╗
 ║            OH NO... YOU FAILED!            ║
 ╚════════════════════════════════════════════╝
-   ✘ Tests · 31/213 tests failed · 4.60s
+
+✘ Tests · 31/213 tests failed · 4.60s
 ```
 
 Only what did not pass is listed, each time with its reason: the first line that differs (expected vs got), a crash signal, a timeout, or the AddressSanitizer or Valgrind report. Tests are built with `-g`: reports point to your file and line.
