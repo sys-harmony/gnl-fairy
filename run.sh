@@ -350,12 +350,12 @@ check_part() {
     done
     verdict "${issues[@]}"
 
-    # Data symbols: uppercase is a global, forbidden. Lowercase without a '.'
-    # is a static outside any function: a global for most evaluators, not all,
-    # so a warning. Function-local statics (func.var for clang, var.N for gcc)
-    # are what the subject expects.
+    # Data symbols: uppercase is a global (R: a const one), forbidden. Lowercase
+    # without a '.' is a static outside any function: a global for most
+    # evaluators, not all, so a warning. Function-local statics (func.var for
+    # clang, var.N for gcc) are what the subject expects.
     step 🌍 "$(label "Global variables")"
-    globals=$(nm $objs | awk '$2 ~ /^[BCDGS]$/ {print $3}' | xargs)
+    globals=$(nm $objs | awk '$2 ~ /^[BCDGRS]$/ {print $3}' | xargs)
     statics=$(nm $objs | awk '$2 ~ /^[bdgs]$/ && $3 !~ /\./ {print $3}' | xargs)
     if [[ -n $globals ]]; then
         fail; say "global variables are forbidden: $globals"

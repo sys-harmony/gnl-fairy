@@ -87,7 +87,7 @@ Warnings, for get_next_line:
 | 📋 Prototype | the compiler checks the header against `char *get_next_line(int fd)` |
 | 🧱 Compilation | `-Wall -Wextra -Werror`, without `-D BUFFER_SIZE` (a default must exist) and with each tested size |
 | 🔍 External functions | `read`, `malloc`, `free` only. `memset`, `memcpy` and `__stack_chk_fail` the compiler emits on its own are allowed, unless written in the sources |
-| 🌍 Global variables | none (failure); a `static` outside any function warns |
+| 🌍 Global variables | none, `const` ones included (failure); a `static` outside any function warns |
 | 🧮 Bonus single static | a single `static` variable |
 | 🧪 Tests | below, at each `BUFFER_SIZE` |
 
