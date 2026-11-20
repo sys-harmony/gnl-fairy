@@ -50,6 +50,7 @@ The exit status is `0` when everything passed (warnings included), `1` otherwise
 [KO] 5000-char line, no newline
      ↳ line 1: expected "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"… (5000 chars), got NULL
 …
+
 🧪 Bonus tests .......................... Done
 🧹 Cleanup .............................. Done
 

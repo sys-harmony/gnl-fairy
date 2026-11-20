@@ -28,6 +28,7 @@ cd "$TESTER_DIR/.." || exit 1
 TMP=$(mktemp -d "/tmp/$TESTER.XXXXXX") || exit 1
 export FAIRY_STATS=$TMP/stats   # each test binary appends "passed failed warned"
 FAILED=0 WARNED=0 FAILED_STEPS="" START=$(date +%s%N)
+SEP=0                           # 1 once details were printed: a blank line before the next step
 declare -A PIDS
 
 # ---- display -----------------------------------------------------------------
@@ -41,17 +42,18 @@ box() {
         $((WIDTH - 2 - w - l)) '' "${bar// /═}" "$RESET"
 }
 
-# step <emoji> <label> opens a step line; ok, fail, warn or note closes it with
-# a dot leader and a status word ending in column WIDTH. Details go below.
-step() { STEP=$2 STEP_COL=$((${#2} + 4)); printf '%s %s ' "$1" "$2"; }
+# step <emoji> <label> opens a step line, after a blank one if the previous step
+# printed details (SEP); ok, fail, warn or note closes it with a dot leader and
+# a status word ending in column WIDTH. Details go below.
+step() { [[ $SEP -eq 1 ]] && { echo; SEP=0; }; STEP=$2 STEP_COL=$((${#2} + 4)); printf '%s %s ' "$1" "$2"; }
 status() {
     local dots
     printf -v dots '%*s' $((WIDTH - STEP_COL - ${#2} - 1)) ''
     printf '%s%s%s %s%s%s\n' "$DIM" "${dots// /.}" "$RESET" "$1" "$2" "$RESET"
 }
 ok()   { status "$GREEN" Done; }
-fail() { FAILED=1 FAILED_STEPS+="${FAILED_STEPS:+, }$STEP"; status "$RED" Failed; }
-warn() { WARNED=1; status "$YELLOW" Warning; }
+fail() { FAILED=1 SEP=1 FAILED_STEPS+="${FAILED_STEPS:+, }$STEP"; status "$RED" Failed; }
+warn() { WARNED=1 SEP=1; status "$YELLOW" Warning; }
 note() { status "$BOLD" "$1"; }
 # verdict <issues...>: fails with one line per issue, or succeeds
 verdict() { if [[ $# -eq 0 ]]; then ok; else fail; for i in "$@"; do say "$i"; done; fi; }
@@ -298,7 +300,10 @@ run_queue() {
         if [[ $code -eq 2 ]]; then [[ $worst -eq 0 ]] && worst=2; elif [[ $code -ne 0 ]]; then worst=1; fi
     done
     case $worst in 0) ok ;; 2) warn ;; *) fail ;; esac
-    for name in "${runs[@]}"; do cat "$TMP/$name.log"; done
+    for name in "${runs[@]}"; do
+        [[ -s $TMP/$name.log ]] && SEP=1
+        cat "$TMP/$name.log"
+    done
 }
 
 # ═══════════════════════════════ end of core ══════════════════════════════════
