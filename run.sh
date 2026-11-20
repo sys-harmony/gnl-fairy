@@ -116,21 +116,28 @@ rc() { cat "$TMP/$1.rc" 2> /dev/null || echo 1; }
 in_git() { git rev-parse --is-inside-work-tree > /dev/null 2>&1; }
 
 # sources: the .c and .h files a grader gets. In a git repository that already
-# tracks some: the tracked ones (a local main.c is fine). Otherwise all.
+# tracks some: the tracked ones still on disk (a local main.c is fine).
+# Otherwise all.
 sources() {
     local files=""
-    in_git && files=$(git ls-files -- '*.c' '*.h' | grep -v "^$TESTER/")
+    in_git && files=$(git ls-files -- '*.c' '*.h' | grep -v "^$TESTER/" \
+        | while read -r f; do [[ -f $f ]] && echo "$f"; done)
     [[ -z $files ]] && files=$(find . -path "./$TESTER" -prune -o -type f \( -name '*.c' -o -name '*.h' \) -print | sed 's|^\./||' | sort)
     [[ -n $files ]] && printf '%s\n' "$files"
 }
 
 # report_untracked <pathspecs...>: warns about the project files git would not
-# hand to the grader. Returns 1 when there is none.
+# hand to the grader, and about those deleted but still committed. Returns 1
+# when there is none.
 report_untracked() {
-    local files
-    files=$(in_git && git ls-files -o --exclude-standard -- "$@" | grep -v "^$TESTER/" | xargs)
-    [[ -z $files ]] && return 1
-    warn; say "not committed, hence not graded: $files"
+    local new old
+    in_git || return 1
+    new=$(git ls-files -o --exclude-standard -- "$@" | grep -v "^$TESTER/" | xargs)
+    old=$(git ls-files -d -- Makefile README.md '*.c' '*.h' | grep -v "^$TESTER/" | xargs)
+    [[ -n $new$old ]] || return 1
+    warn
+    [[ -z $new ]] || say "not committed, hence not graded: $new"
+    [[ -z $old ]] || say "deleted but still committed, hence graded: $old"
 }
 
 # Norminette starts in the background at once: it is the slowest check.
