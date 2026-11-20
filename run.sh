@@ -73,7 +73,7 @@ clean_project() { :; }
 kill_tree() { local c; for c in $(pgrep -P "$1" 2> /dev/null); do kill_tree "$c"; done; kill "$1" 2> /dev/null; }
 
 finish() {
-    local rc=$? pid total=0 ko=0 secs
+    local rc=$? pid total=0 ko=0 warned=0 secs
     for pid in $(pgrep -P $$ 2> /dev/null); do kill_tree "$pid"; done
     if [[ $rc -eq 130 ]]; then
         clean_project; rm -rf "$TMP"
@@ -81,22 +81,24 @@ finish() {
         return
     fi
     step 🧹 Cleanup; clean_project; ok
-    [[ -f $FAIRY_STATS ]] && read -r total ko < <(awk '{p += $1; f += $2} END {print p + f, f + 0}' "$FAIRY_STATS")
+    [[ -f $FAIRY_STATS ]] && read -r total ko warned < <(awk '{p += $1; f += $2; w += $3} END {print p + f, f + 0, w + 0}' "$FAIRY_STATS")
     rm -rf "$TMP"
     secs=$(( ($(date +%s%N) - START) / 10000000 ))
     printf -v secs '%d.%02ds' $((secs / 100)) $((secs % 100))
     echo
     if [[ $FAILED -eq 0 ]]; then
         box "$GREEN" "OH MY, YOU PASSED!"
-        printf '\n%s✔ %d tests passed in %s%s' "$GREEN" "$total" "$secs" "$RESET"
-        [[ $WARNED -eq 1 ]] && printf '  %s⚠ warnings above: not failures, worth a look%s' "$YELLOW" "$RESET"
+        printf '\n%s✔ %d tests passed in %s%s\n' "$GREEN" "$total" "$secs" "$RESET"
     else
         box "$RED" "OH NO... YOU FAILED!"
         printf '\n%s✘ %s' "$RED" "$FAILED_STEPS"
         [[ $ko -gt 0 ]] && printf ' · %d/%d tests failed' "$ko" "$total"
-        printf ' · %s%s' "$secs" "$RESET"
+        printf ' · %s%s\n' "$secs" "$RESET"
     fi
-    printf '\n\n'
+    # Under the green or red line, a step that warned or a test run that reported
+    # a warning (a failed run lists them too: the tests count them apart)
+    [[ $WARNED -eq 1 || $warned -gt 0 ]] && printf '%s⚠ warnings above: not failures, worth a look%s\n' "$YELLOW" "$RESET"
+    echo
 }
 trap finish EXIT
 trap 'exit 130' INT TERM
