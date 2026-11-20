@@ -70,6 +70,7 @@ Warnings, for get_next_line:
 - after a `read()` error: a partial line returned instead of `NULL`, or the stash kept (the next file on that fd starts with stale data)
 - `read()` called with another size than `BUFFER_SIZE`, or the whole file read before the first line comes back
 - a `static` variable declared outside any function
+- a GB or more of static data at `BUFFER_SIZE` 10000000 (a buffer per fd: `static char buf[OPEN_MAX][BUFFER_SIZE + 1]`): a smaller machine may not even load it
 - memory still held at exit after reading to the end (Valgrind's *still reachable*), or leaks left unchecked because Valgrind cannot load over ~1 GB of static data
 - a valid but high fd (1023) not served
 - anything going wrong with `BUFFER_SIZE` 0 or -1, outside the subject
@@ -87,7 +88,7 @@ Warnings, for get_next_line:
 | 📋 Prototype | the compiler checks the header against `char *get_next_line(int fd)` |
 | 🧱 Compilation | `-Wall -Wextra -Werror`, without `-D BUFFER_SIZE` (a default must exist) and with each tested size |
 | 🔍 External functions | `read`, `malloc`, `free` only. `memset`, `memcpy` and `__stack_chk_fail` the compiler emits on its own are allowed, unless written in the sources |
-| 🌍 Global variables | none, `const` ones included (failure); a `static` outside any function warns |
+| 🌍 Global variables | none, `const` ones included (failure); a `static` outside any function warns, and so does a GB or more of static data at the largest `BUFFER_SIZE` |
 | 🧮 Bonus single static | a single `static` variable |
 | 🧪 Tests | below, at each `BUFFER_SIZE` |
 

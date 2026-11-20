@@ -311,7 +311,7 @@ compile() { cc -Wall -Wextra -Werror ${3:+-D BUFFER_SIZE=$3} -I. -c "$2" -o "$TM
 
 # check_part <prefix> <header> <sources...>: the static checks of one part
 check_part() {
-    local pfx=$1 hdr=$2 tag=${1:0:1} src bs sym objs="" issues=() globals statics
+    local pfx=$1 hdr=$2 tag=${1:0:1} src bs sym objs="" issues=() globals statics big huge
     shift 2
 
     # The prototype as the compiler sees it: undeclared or conflicting fails
@@ -357,10 +357,17 @@ check_part() {
     step 🌍 "$(label "Global variables")"
     globals=$(nm $objs | awk '$2 ~ /^[BCDGRS]$/ {print $3}' | xargs)
     statics=$(nm $objs | awk '$2 ~ /^[bdgs]$/ && $3 !~ /\./ {print $3}' | xargs)
+    # A GB of static data or more at the largest BUFFER_SIZE (a buffer per fd,
+    # say) may not load on a smaller machine: a warning
+    big=${BUFFER_SIZES##* }
+    huge=$(for src in "$@"; do size "$TMP/$tag${src%.c}_bs$big.o"; done 2> /dev/null \
+        | awk '$1 ~ /^[0-9]+$/ {t += $2 + $3} END {if (t >= 2^30) printf "%.1f", t / 2^30}')
     if [[ -n $globals ]]; then
         fail; say "global variables are forbidden: $globals"
-    elif [[ -n $statics ]]; then
-        warn; say "static variables declared outside any function: $statics"
+    elif [[ -n $statics || -n $huge ]]; then
+        warn
+        [[ -z $statics ]] || say "static variables declared outside any function: $statics"
+        [[ -z $huge ]] || say "static data of $huge GB at BUFFER_SIZE=$big: a smaller machine may not load it (allocate the buffers instead)"
     else
         ok
     fi
