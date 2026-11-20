@@ -65,7 +65,7 @@ Only what did not pass is listed, each time with its reason: the first line that
 
 ## ⚖️ Failures and warnings
 
-A **failure** is a bug or a clear subject violation. A **warning** is something debatable: worth a look, maybe a question from your evaluator, never a failure. A working get_next_line passes.
+A **failure** is a bug or a clear subject violation. A **warning** is something debatable: worth a look, maybe a question from your evaluator, never a failure. A working get_next_line passes. Under the green or red verdict, a yellow line says so when there are warnings above, a failed run included.
 
 Warnings, for get_next_line:
 
