@@ -190,6 +190,13 @@ emitted() {
 }
 
 # ---- test runs ---------------------------------------------------------------
+# died <status>: why a run under timeout ended badly
+died() {
+    if [[ $1 -eq 124 ]]; then echo "timed out"
+    elif [[ $1 -gt 128 ]]; then echo "crashed: SIG$(kill -l $(($1 - 128)) 2> /dev/null)"
+    else echo "exited with status $1"; fi
+}
+
 # tests <title> <binary>: a test binary prints the sections that did not pass
 # and exits 0, 1 (failure) or 2 (warnings). Anything else is reported here.
 tests() {
@@ -198,7 +205,7 @@ tests() {
     rc=$?
     [[ $rc -le 2 ]] && return $rc
     section "$1"
-    if [[ $rc -eq 124 ]]; then say "timed out"; else say "crashed: SIG$(kill -l $((rc - 128)) 2> /dev/null)"; fi
+    say "$(died $rc)"
     if [[ -n ${LENIENT:-} ]]; then echo "1 0 1" >> "$FAIRY_STATS"; return 2; fi
     echo "0 1 0" >> "$FAIRY_STATS"
     return 1
@@ -221,10 +228,8 @@ memcheck() {
         rc=2 note="Valgrind cannot load it (huge static data): leaks NOT checked"
     elif [[ $rc -eq 0 ]] && grep -qE "(still reachable|possibly lost): [1-9]" "$log"; then
         rc=2 note="memory still held at exit: not a leak for Valgrind, worth freeing"
-    elif [[ $rc -eq 124 ]]; then
-        rc=1 note="timed out"
     elif [[ $rc -ne 0 && $rc -ne 42 ]]; then
-        note="crashed: SIG$(kill -l $((rc - 128)) 2> /dev/null)" rc=1
+        note=$(died $rc) rc=1
     elif [[ $rc -eq 42 ]]; then
         rc=1
     fi
