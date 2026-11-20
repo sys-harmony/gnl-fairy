@@ -171,7 +171,9 @@ check_readme() {
     for section in Description Instructions Res+ources; do
         grep -qiE "^\s*(#+|[*_]{1,2}).*$section" README.md || issues+=("no \"${section/s+/s}\" section")
     done
-    grep -qiE '\bAI\b|artificial intelligence|chatgpt|claude|copilot|gemini|LLM' README.md \
+    # AI and IA only in capitals: with -i, the French "j'ai" would count
+    grep -qE '\b(AI|IA|LLMs?|GPT)\b' README.md \
+        || grep -qiE 'artificial intelligence|intelligence artificielle|chatgpt|openai|claude|anthropic|copilot|gemini|mistral|deepseek|perplexity' README.md \
         || issues+=("Resources: say how AI was used, for which tasks and parts")
     [[ -n ${1:-} ]] && ! grep -qi "$1" README.md && issues+=("no explanation of the $1")
     if [[ ${#issues[@]} -eq 0 ]]; then
